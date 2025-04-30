@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Api.Controllers
 {
-    [Route("api/[controller]")] // "api/products/"  // url
+    [Route("api/V1.0/[controller]")] // "api/V1.0/products/"  // url
     [ApiController]
     public class ProductsController : ControllerBase
     {
@@ -16,14 +16,14 @@ namespace Api.Controllers
         }
 
 
-        [HttpGet]
+        [HttpGet("GetAll")] // api/V1.0/products/GetAll
         public async Task<IActionResult> GetAll()
         {
             var products = await _productService.GetAllAsync();
             return Ok(products);
         }
 
-        [HttpGet("getById/{id}")]
+        [HttpGet("getById/{id}")] // api/V1.0/products/getById/{id}
         public async Task<IActionResult> GetById(int id)
         {
             try
@@ -38,7 +38,7 @@ namespace Api.Controllers
                 return BadRequest(new {statusCode = 400 ,message = ex.Message });
             }
         }
-        [HttpPost]
+        [HttpPost("Add")]  // api/V1.0/products/Add
         public async Task<IActionResult> Add( Product model)
         {
             try
@@ -56,7 +56,7 @@ namespace Api.Controllers
             }
         }
 
-        [HttpPut]
+        [HttpPut("Edit")]   // api/V1.0/products/Edit
         public async Task<IActionResult> Update(Product model)
         {
             try
@@ -75,7 +75,7 @@ namespace Api.Controllers
         }
 
 
-        [HttpDelete("{id}")]
+        [HttpDelete("Delete/{id}")]   // api/V1.0/products/Delete/{id}
         public async Task<IActionResult> Delete(int id)
         {
             try
