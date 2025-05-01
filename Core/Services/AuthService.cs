@@ -33,7 +33,10 @@ namespace Core.Services
 
             var result = await _userManager.CreateAsync(user, model.Password);
             if(result.Succeeded)
-                return user;
+            {
+                await _userManager.AddToRoleAsync(user,"User");
+                return user; 
+            }
             return null;
 
         }

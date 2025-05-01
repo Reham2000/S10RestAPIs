@@ -1,7 +1,10 @@
 ﻿using Core.Interfaces;
 using Domain.DTos;
+using Infrastructure.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using System.IdentityModel.Tokens.Jwt;
 
 namespace Api.Controllers
 {
@@ -11,10 +14,12 @@ namespace Api.Controllers
     {
         private readonly IAuthService _authService;
         private readonly ITokenService _tokenService;
-        public AuthController(IAuthService authService, ITokenService tokenService)
+        private readonly IUnitOfWork _unitOfWork;
+        public AuthController(IAuthService authService, ITokenService tokenService,IUnitOfWork unitOfWork)
         {
             _authService = authService;
             _tokenService = tokenService;
+            _unitOfWork = unitOfWork;
         }
 
         // POST: api/V1.0/Auth/Register
@@ -109,5 +114,41 @@ namespace Api.Controllers
                     });
             }
         }
+
+        [HttpPost("Logout")]
+        public async Task<IActionResult> Logout()
+        {
+            try
+            {
+                var jti = User.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
+                if (string.IsNullOrWhiteSpace(jti))
+                {
+                    return Unauthorized(new
+                    {
+                        StatusCode = StatusCodes.Status401Unauthorized,
+                        message = "Invalid Token : Missing JTI"
+                    });
+                }
+                await _unitOfWork.revokedTokens.RevokTokenAsync(jti);
+                await _unitOfWork.CompleteAsync();
+
+                return Ok(new
+                {
+                    StatusCode = StatusCodes.Status200OK,
+                    message = "Logged out successfully!"
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(StatusCodes.Status500InternalServerError, new
+                {
+                    StatusCode = StatusCodes.Status500InternalServerError,
+                    message = "an error occurred while logging out...",
+                    Details = ex.Message,
+                });
+            }
+        }
+
+
     }
 }

@@ -10,6 +10,7 @@ namespace Infrastructure.Interfaces
     public interface IUnitOfWork : IDisposable
     {
         IProductRepository products { get; }
+        IRevokedTokenRepository revokedTokens { get; }
 
         Task<int> CompleteAsync();
     }

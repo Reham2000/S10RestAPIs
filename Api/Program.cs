@@ -1,11 +1,18 @@
+using Core.Authorization;
 using Core.Interfaces;
+using Core.Middelware;
 using Core.Services;
 using Domain.DTos;
 using Infrastructure.Data;
 using Infrastructure.Implements;
 using Infrastructure.Interfaces;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -36,7 +43,28 @@ builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 
 
-builder.Services.Configure<Jwt>(builder.Configuration.GetSection("JwtSettings"));
+//builder.Services.Configure<Jwt>(builder.Configuration.GetSection("JwtSettings"));
+var jwtSettings = builder.Configuration.GetSection("JwtSettings");
+builder.Services.Configure<Jwt>(jwtSettings);
+builder.Services.AddSingleton(jwtSettings);
+
+// add policy 
+
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy("AdminPolicy",policy => policy.Requirements.Add(
+        new CustomAuthorizationRequirement(new List<string> {"Admin" })));
+    options.AddPolicy("UserPolicy", policy => policy.Requirements.Add(
+        new CustomAuthorizationRequirement(new List<string> { "User" })));
+    options.AddPolicy("ManagerPolicy", policy => policy.Requirements.Add(
+        new CustomAuthorizationRequirement(new List<string> { "Manager" })));
+    options.AddPolicy("AllPolicy", policy => policy.Requirements.Add(
+        new CustomAuthorizationRequirement(new List<string> { "Admin","User","Magager" })));
+});
+
+
+
+
 
 
 
@@ -50,6 +78,16 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+using(var scope = app.Services.CreateScope())
+{
+    var service = scope.ServiceProvider;
+    await DbInitalizer.SeedRolesAsync(service);
+}
+
+
+
+app.UseMiddleware<TokenRevocation>();
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
