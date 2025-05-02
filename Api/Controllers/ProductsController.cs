@@ -1,5 +1,6 @@
 ﻿using Core.Interfaces;
 using Domain.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -15,14 +16,14 @@ namespace Api.Controllers
             _productService = productService;
         }
 
-
+        [Authorize(Policy = "AllPolicy")]
         [HttpGet("GetAll")] // api/V1.0/products/GetAll
         public async Task<IActionResult> GetAll()
         {
             var products = await _productService.GetAllAsync();
             return Ok(products);
         }
-
+        [Authorize(Policy = "AllPolicy")]
         [HttpGet("getById/{id}")] // api/V1.0/products/getById/{id}
         public async Task<IActionResult> GetById(int id)
         {
@@ -38,6 +39,7 @@ namespace Api.Controllers
                 return BadRequest(new {statusCode = 400 ,message = ex.Message });
             }
         }
+        [Authorize(Policy = "AdminManagerPolicy")]
         [HttpPost("Add")]  // api/V1.0/products/Add
         public async Task<IActionResult> Add( Product model)
         {
@@ -55,7 +57,7 @@ namespace Api.Controllers
                 return BadRequest(new { statusCode = 400, message = ex.Message });
             }
         }
-
+        [Authorize(Policy = "AdminManagerPolicy")]
         [HttpPut("Edit")]   // api/V1.0/products/Edit
         public async Task<IActionResult> Update(Product model)
         {
@@ -74,7 +76,7 @@ namespace Api.Controllers
             }
         }
 
-
+        [Authorize(Policy = "AdminPolicy")]
         [HttpDelete("Delete/{id}")]   // api/V1.0/products/Delete/{id}
         public async Task<IActionResult> Delete(int id)
         {

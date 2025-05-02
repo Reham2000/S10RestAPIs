@@ -114,7 +114,7 @@ namespace Api.Controllers
                     });
             }
         }
-
+        [Authorize(Policy = "AllPolicy")]
         [HttpPost("Logout")]
         public async Task<IActionResult> Logout()
         {
@@ -148,7 +148,64 @@ namespace Api.Controllers
                 });
             }
         }
+        [Authorize(Policy = "AllPolicy")]
+        [HttpPost("refresh-token")]
+        public async Task<IActionResult> RefreshToken(TokenRequest request)
+        {
+            var response = await _tokenService.RefreshToken(request.Token,GetIpAddress());
+            if(response == null)
+                return Unauthorized(new
+                {
+                    StatusCaode = StatusCodes.Status401Unauthorized,
+                    message = "Invaild token"
+                });
+            return Ok(new
+            {
+                StatusCaode = StatusCodes.Status401Unauthorized,
+                message = "Refresh token generated successfully!",
+                response = response
 
+            });
+
+        }
+
+        [Authorize(Policy = "AllPolicy")]
+        [HttpPost("revoce-token")]
+        public async Task<IActionResult> RevoceTohen(TokenRequest request)
+        {
+            var result = await _tokenService.RevokeToken(request.Token,GetIpAddress());
+            if(result)
+                return Ok(new
+                {
+                    StatusCaode = StatusCodes.Status200OK,
+                    message = "token has been revoced successsfully!",
+                    data = result
+                });
+            return NotFound(new
+            {
+                StatusCaode = StatusCodes.Status404NotFound,
+                message = "Invaild token : token Not found!"
+            });
+        }
+
+
+
+
+
+
+
+
+
+
+
+
+
+        private string GetIpAddress()
+        {
+            return Request.Headers.ContainsKey("X-Forwarded-For")
+                ? Request.Headers["X-Forwarded-For"]
+                : HttpContext.Connection.RemoteIpAddress.MapToIPv4().ToString();
+        }
 
     }
 }

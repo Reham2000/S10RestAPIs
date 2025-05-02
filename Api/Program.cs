@@ -43,10 +43,45 @@ builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 
 
-//builder.Services.Configure<Jwt>(builder.Configuration.GetSection("JwtSettings"));
-var jwtSettings = builder.Configuration.GetSection("JwtSettings");
-builder.Services.Configure<Jwt>(jwtSettings);
+builder.Services.Configure<Jwt>(builder.Configuration.GetSection("JwtSettings"));
+var jwtSettings = builder.Configuration.GetSection("JwtSettings").Get<Jwt>();
+//builder.Services.Configure<Jwt>(jwtSettings);
 builder.Services.AddSingleton(jwtSettings);
+
+
+// jwt settings
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+}).AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = jwtSettings.Issuer,
+        ValidAudience = jwtSettings.Audience,
+        // key
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Secretkey))
+    };
+    // logout
+    options.Events = new JwtBearerEvents
+    {
+        OnTokenValidated = async context =>
+        {
+            var revocedToken = context.HttpContext.RequestServices
+            .GetRequiredService<IRevokedTokenRepository>();
+            var jti = context.Principal.FindFirst(JwtRegisteredClaimNames.Jti)?.Value;
+            if (jti is not null && await revocedToken.IsTokenRevokedAsync(jti))
+                context.Fail("The Token Has been Revoced!");
+        }
+    };
+});
+
+
 
 // add policy 
 
@@ -58,13 +93,15 @@ builder.Services.AddAuthorization(options =>
         new CustomAuthorizationRequirement(new List<string> { "User" })));
     options.AddPolicy("ManagerPolicy", policy => policy.Requirements.Add(
         new CustomAuthorizationRequirement(new List<string> { "Manager" })));
+    options.AddPolicy("AdminManagerPolicy", policy => policy.Requirements.Add(
+        new CustomAuthorizationRequirement(new List<string> { "Admin", "Magager" })));
     options.AddPolicy("AllPolicy", policy => policy.Requirements.Add(
         new CustomAuthorizationRequirement(new List<string> { "Admin","User","Magager" })));
 });
 
 
 
-
+builder.Services.AddHttpContextAccessor();
 
 
 

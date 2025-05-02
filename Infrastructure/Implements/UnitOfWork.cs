@@ -15,11 +15,13 @@ namespace Infrastructure.Implements
             _jwt = jwt;
             products = new ProductRepository(_context);
             revokedTokens = new RevokedTokenRepository(_context,_jwt);
+            refreshTokens = new RefreshTokenRepository(_context);
         }
 
 
         public IProductRepository products { get; private set; }
         public IRevokedTokenRepository revokedTokens { get; private set; }
+        public IRefreshTokenRepository refreshTokens { get; private set; }
 
         public async Task<int> CompleteAsync() =>  await _context.SaveChangesAsync();
 

@@ -11,6 +11,7 @@ namespace Infrastructure.Interfaces
     {
         IProductRepository products { get; }
         IRevokedTokenRepository revokedTokens { get; }
+        IRefreshTokenRepository refreshTokens { get; }
 
         Task<int> CompleteAsync();
     }
