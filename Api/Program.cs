@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -34,13 +35,16 @@ builder.Services.AddSwaggerGen();
 
 
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+builder.Services.AddScoped<IServiceUnitOfWork, ServiceUnitOfWork>();
 builder.Services.AddScoped(typeof(IGenericReposatory<>), typeof(GenericRepository<>));
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
-
-
 builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<IAuthorizationHandler,CustomAuthorizationHandler>();
+builder.Services.AddScoped<IRevokedTokenRepository, RevokedTokenRepository>();
+
+
 
 
 builder.Services.Configure<Jwt>(builder.Configuration.GetSection("JwtSettings"));
@@ -64,6 +68,7 @@ builder.Services.AddAuthentication(options =>
         ValidateIssuerSigningKey = true,
         ValidIssuer = jwtSettings.Issuer,
         ValidAudience = jwtSettings.Audience,
+        RoleClaimType = ClaimTypes.Role,
         // key
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Secretkey))
     };

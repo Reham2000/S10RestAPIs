@@ -9,21 +9,22 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace Core.Services
 {
     public class TokenService : ITokenService
     {
-        private readonly Jwt _jwt;
+        //private readonly Jwt _unitOfWork.jwt;
         private readonly IUnitOfWork _unitOfWork;
-        private readonly UserManager<User> _userManager;
-        public TokenService(IOptions<Jwt> jwt,IUnitOfWork unitOfWork,UserManager<User> userManager)
+        //private readonly UserManager<User> _unitOfWork.userManager;
+        public TokenService(/*IOptions<Jwt> jwt,*/IUnitOfWork unitOfWork/*,UserManager<User> userManager*/)
         {
-            _jwt = jwt.Value;
+            //_unitOfWork.jwt = jwt.Value;
             _unitOfWork = unitOfWork;
-            _userManager = userManager;
+            //_unitOfWork.userManager = userManager;
         }
-        public string GenerateJwtToken(User user)
+        public async Task<string> GenerateJwtToken(User user)
         {
             var claims = new List<Claim>
             {
@@ -32,12 +33,18 @@ namespace Core.Services
                 new Claim(ClaimTypes.NameIdentifier,user.Id),
                 new Claim(ClaimTypes.Email,user.Email)
             };
-            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwt.Secretkey));
+            var roles = await _unitOfWork.userManager.GetRolesAsync(user);
+            foreach(var role in roles)
+            {
+                claims.Add(new Claim(ClaimTypes.Role,role));
+
+            }
+            var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_unitOfWork.jwt.Secretkey));
             var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-            var expires = DateTime.Now.AddMinutes(_jwt.ExpiryDurationInMinutes);
+            var expires = DateTime.Now.AddMinutes(_unitOfWork.jwt.ExpiryDurationInMinutes);
             var token = new JwtSecurityToken(
-                issuer: _jwt.Issuer,
-                audience: _jwt.Audience,
+                issuer: _unitOfWork.jwt.Issuer,
+                audience: _unitOfWork.jwt.Audience,
                 claims : claims,
                 expires: expires,
                 signingCredentials:creds
@@ -45,12 +52,14 @@ namespace Core.Services
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
-        public RefreshToken GenerateRefreshToken(string ipAddress)
+        public RefreshToken GenerateRefreshToken(string ipAddress,string jwtToken = null)
         {
             return new RefreshToken
             {
-                Token = Convert.ToBase64String(RandomNumberGenerator.GetBytes(64)),
-                Expires = DateTime.Now.AddMinutes(_jwt.ExpiryDurationInMinutes),
+                Token = jwtToken == null ?
+                Convert.ToBase64String(RandomNumberGenerator.GetBytes(64))  :
+                 jwtToken,
+                Expires = DateTime.Now.AddMinutes(_unitOfWork.jwt.ExpiryDurationInMinutes),
                 Created = DateTime.Now,
                 CreatedByIp = ipAddress,
             };
@@ -62,16 +71,16 @@ namespace Core.Services
             if (refreshToken == null || !refreshToken.IsActive)
                 return null;
 
-            var user = await _userManager.FindByIdAsync(refreshToken.UserId);
+            var user = await _unitOfWork.userManager.FindByIdAsync(refreshToken.UserId);
 
-            var newRefreshToken = GenerateRefreshToken(ipAddress);
+            var jwtToken = await GenerateJwtToken(user);
+            var newRefreshToken = GenerateRefreshToken(ipAddress,jwtToken);
             refreshToken.Revoced = DateTime.Now;
             refreshToken.RevocedByIp = ipAddress;
 
             user.RefreshTokens.Add(refreshToken);
             await _unitOfWork.CompleteAsync();
 
-            var jwtToken =  GenerateJwtToken(user);
             return new AuthenticationResponse(jwtToken,newRefreshToken.Token);
 
         }

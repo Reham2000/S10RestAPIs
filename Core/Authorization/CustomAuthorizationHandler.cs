@@ -13,9 +13,20 @@ namespace Core.Authorization
         protected override Task HandleRequirementAsync(AuthorizationHandlerContext context,
             CustomAuthorizationRequirement requirement)
         {
-            var roleClaim = context.User.FindFirst(r  => r.Type == ClaimTypes.Role);
+            // get one role
+            //var roleClaim = context.User.FindFirst(r  => r.Type == ClaimTypes.Role);
 
-            if (roleClaim is not null && requirement.AllowedRoles.Contains(roleClaim.Value))
+            //if (roleClaim is not null && requirement.AllowedRoles.Contains(roleClaim.Value))
+            //{
+            //    context.Succeed(requirement);
+            //}
+            //return Task.CompletedTask;
+
+
+            // many roles
+
+            var roleClaim = context.User.FindAll(ClaimTypes.Role).Select(c => c.Value);
+            if(roleClaim.Any(role => requirement.AllowedRoles.Contains(role)))
             {
                 context.Succeed(requirement);
             }

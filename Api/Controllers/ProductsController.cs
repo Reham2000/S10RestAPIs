@@ -10,17 +10,19 @@ namespace Api.Controllers
     [ApiController]
     public class ProductsController : ControllerBase
     {
-        private readonly IProductService _productService;
-        public ProductsController(IProductService productService)
+        //private readonly IProductService _productService;
+        private readonly IServiceUnitOfWork _services;
+        public ProductsController(/*IProductService productService*/IServiceUnitOfWork services)
         {
-            _productService = productService;
+            _services = services;
+            //_productService = productService;
         }
 
         [Authorize(Policy = "AllPolicy")]
         [HttpGet("GetAll")] // api/V1.0/products/GetAll
         public async Task<IActionResult> GetAll()
         {
-            var products = await _productService.GetAllAsync();
+            var products = await _services.productService.GetAllAsync();
             return Ok(products);
         }
         [Authorize(Policy = "AllPolicy")]
@@ -29,7 +31,7 @@ namespace Api.Controllers
         {
             try
             {
-                var product = await _productService.GetByIdAsync(id);
+                var product = await _services.productService.GetByIdAsync(id);
                 if(product is null)
                     return NotFound(new { statusCode = 404, message = $"Product with id : {id} not found" });
                 return Ok(new { statusCode = 200, message= "done!" , data= product });
@@ -47,7 +49,7 @@ namespace Api.Controllers
             {
                 if(ModelState.IsValid)
                 {
-                    await _productService.AddAsync(model);
+                    await _services.productService.AddAsync(model);
                     return Ok(new { statusCode = 200, message = "Product added successfully!" });
                 }
                 return BadRequest(new { statusCode = 400, message = "Data is not valid!" });
@@ -65,7 +67,7 @@ namespace Api.Controllers
             {
                 if (ModelState.IsValid)
                 {
-                    await _productService.UpdateAsync(model);
+                    await _services.productService.UpdateAsync(model);
                     return Ok(new { statusCode = 200, message = "Product updated successfully!" });
                 }
                 return BadRequest(new { statusCode = 400, message = "Data is not valid!" });
@@ -82,9 +84,9 @@ namespace Api.Controllers
         {
             try
             {
-                if(_productService.GetByIdAsync(id) is null)
+                if(_services.productService.GetByIdAsync(id) is null)
                     return NotFound(new { statusCode = 404, message = $"Product with id : {id} not found" });
-                await _productService.DeleteAsync(id);
+                await _services.productService.DeleteAsync(id);
                 return Ok(new { statusCode = 200, message = "Product deleted successfully!" });
             }
             catch (Exception ex)

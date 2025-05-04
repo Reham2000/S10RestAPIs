@@ -12,14 +12,18 @@ namespace Api.Controllers
     [ApiController]
     public class AuthController : ControllerBase
     {
-        private readonly IAuthService _authService;
-        private readonly ITokenService _tokenService;
+        //private readonly IAuthService _services.authService;
+        //private readonly ITokenService _tokenService;
         private readonly IUnitOfWork _unitOfWork;
-        public AuthController(IAuthService authService, ITokenService tokenService,IUnitOfWork unitOfWork)
+        private readonly IServiceUnitOfWork _services;
+        public AuthController(/*IAuthService authService, ITokenService tokenService,*/
+            IUnitOfWork unitOfWork,IServiceUnitOfWork serviceUnitOfWork)
         {
-            _authService = authService;
-            _tokenService = tokenService;
+            //_services.authService = authService;
+            //_tokenService = tokenService;
             _unitOfWork = unitOfWork;
+            _services = serviceUnitOfWork;
+
         }
 
         // POST: api/V1.0/Auth/Register
@@ -30,20 +34,20 @@ namespace Api.Controllers
             {
                 if (ModelState.IsValid)
                 {
-                    var user = await _authService.RegisterAsync(model);
-                    if (user is null)
+                    var result = await _services.authService.RegisterAsync(model);
+                    if (!result.IsSuccessed)
                         return BadRequest(new {
                             StatusCode = StatusCodes.Status400BadRequest,
-                            message = "User already exists" 
+                            message = result.Errors 
                         });
                     return Ok(new { 
                             StatusCode = StatusCodes.Status200OK,
                         message = "User created successfully",
                         Data = new
                         {
-                            UserId = user.Id,
-                            UserName = user.UserName,
-                            Email = user.Email
+                            UserId = result.Model.Id,
+                            UserName = result.Model.UserName,
+                            Email = result.Model.Email
                         }
                     });
                 }
@@ -60,6 +64,51 @@ namespace Api.Controllers
                     message = ex.Message });
             }
         }
+        [Authorize(Policy ="AdminPolicy")]
+        // POST: api/V1.0/Auth/Register
+        [HttpPost("Add")]
+        public async Task<IActionResult> Add(UserDTo model)
+        {
+            try
+            {
+                if (ModelState.IsValid)
+                {
+                    var result = await _services.authService.AddAsync(model);
+                    if (!result.IsSuccessed)
+                        return BadRequest(new
+                        {
+                            StatusCode = StatusCodes.Status400BadRequest,
+                            message = "Registration Faild",
+                            Errors = result.Errors
+                        });
+                    return Ok(new
+                    {
+                        StatusCode = StatusCodes.Status200OK,
+                        message = "User created successfully",
+                        Data = new
+                        {
+                            UserId = result.Model.Id,
+                            UserName = result.Model.UserName,
+                            Email = result.Model.Email
+                        }
+                    });
+                }
+                return BadRequest(new
+                {
+                    StatusCode = StatusCodes.Status400BadRequest,
+                    message = "Invalid model",
+                    Errors = ModelState.Values.SelectMany(v => v.Errors).Select(e => e.ErrorMessage)
+                });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new
+                {
+                    StatusCode = StatusCodes.Status400BadRequest,
+                    message = ex.Message
+                });
+            }
+        }
 
         // login
         [HttpPost("Login")]
@@ -70,25 +119,25 @@ namespace Api.Controllers
                 if (ModelState.IsValid)
                 {
 
-                    var user = await _authService.LoginAsync(model);
-                    if(user is null)
+                    var result = await _services.authService.LoginAsync(model);
+                    if(!result.IsSuccessed)
                         return Unauthorized(new
                         {
                             StatusCode = StatusCodes.Status401Unauthorized,
-                            message = "Invalid UserName Or Password!"
+                            message = result.Errors
                         });
                     // generate token
-                    var token = _tokenService.GenerateJwtToken(user);
-                    await _authService.StoreJwtToken(user, token);
+                    var token = await _services.tokenService.GenerateJwtToken(result.Model);
+                    await _services.authService.StoreJwtToken(result.Model, token);
                     return Ok(new
                     {
                         StatusCode = StatusCodes.Status200OK,
                         message = "User Logged in Successfully!",
                         Data = new
                         {
-                            UserId = user.Id,
-                            user.UserName,
-                            user.Email,
+                            UserId = result.Model.Id,
+                            result.Model.UserName,
+                            result.Model.Email,
                             Token = token
                         }
                     });
@@ -152,7 +201,7 @@ namespace Api.Controllers
         [HttpPost("refresh-token")]
         public async Task<IActionResult> RefreshToken(TokenRequest request)
         {
-            var response = await _tokenService.RefreshToken(request.Token,GetIpAddress());
+            var response = await _services.tokenService.RefreshToken(request.Token,GetIpAddress());
             if(response == null)
                 return Unauthorized(new
                 {
@@ -173,13 +222,13 @@ namespace Api.Controllers
         [HttpPost("revoce-token")]
         public async Task<IActionResult> RevoceTohen(TokenRequest request)
         {
-            var result = await _tokenService.RevokeToken(request.Token,GetIpAddress());
+            var result = await _services.tokenService.RevokeToken(request.Token,GetIpAddress());
             if(result)
                 return Ok(new
                 {
                     StatusCaode = StatusCodes.Status200OK,
                     message = "token has been revoced successsfully!",
-                    data = result
+                    data = result ? "Ok!" : "Error!"
                 });
             return NotFound(new
             {

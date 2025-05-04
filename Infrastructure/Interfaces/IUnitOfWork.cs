@@ -1,4 +1,7 @@
-﻿using Domain.Models;
+﻿using Domain.DTos;
+using Domain.Models;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,6 +15,13 @@ namespace Infrastructure.Interfaces
         IProductRepository products { get; }
         IRevokedTokenRepository revokedTokens { get; }
         IRefreshTokenRepository refreshTokens { get; }
+
+        UserManager<User> userManager { get; }
+        SignInManager<User> signInManager { get; }
+        RoleManager<IdentityRole> roleManager { get; }
+        IHttpContextAccessor httpContextAccessor { get; }
+        Jwt jwt { get; }
+
 
         Task<int> CompleteAsync();
     }

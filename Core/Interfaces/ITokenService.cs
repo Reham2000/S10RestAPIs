@@ -1,5 +1,6 @@
 ﻿using Domain.DTos;
 using Domain.Models;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,11 +11,11 @@ namespace Core.Interfaces
 {
     public interface ITokenService
     {
-        string GenerateJwtToken(User user);
+        Task<string> GenerateJwtToken(User user);
 
 
         // RefreshToken
-        RefreshToken GenerateRefreshToken(string ipAddress);
+        RefreshToken GenerateRefreshToken(string ipAddress,string jwtToken = null);
         Task<AuthenticationResponse> RefreshToken(string token,string ipAddress);
         Task<bool> RevokeToken(string token , string ipAddress);
     }
